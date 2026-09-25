@@ -3,16 +3,20 @@ package es.masanz;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class GreetingController {
 
     @GetMapping("/")
-    public String greeting(Model model) {
-        // Añadimos un atributo al modelo para enviarlo a la vista HTML
-        model.addAttribute("name", "Andoni");
+    public String greeting(
+            @RequestParam(name = "name", required = false, defaultValue = "Andoni") String name,
+            Model model) {
 
-        // Retorna el nombre de la plantilla HTML que se va a cargar (index.html)
+        // El atributo recibirá el valor que pongas en la URL (poner?)
+        model.addAttribute("name", name);
+
+
         return "index";
     }
 }
