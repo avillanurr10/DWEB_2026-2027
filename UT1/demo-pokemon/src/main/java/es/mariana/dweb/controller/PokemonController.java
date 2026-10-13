@@ -23,6 +23,22 @@ public class PokemonController {
 
         return "home";
     }
+    @GetMapping("/pokemon/tabla")
+    public String listadoTabla (Model model) {
+        ArrayList<Pokemon> pokemons = pokemonService.findRandomList(10);
+        model.addAttribute("pokemons", pokemons);
+        model.addAttribute("titulo", "Pokémon en formato tabla");
+        model.addAttribute("fechaHora", LocalDateTime.now());
+
+        return "listado-tabla";
+    }
+    @GetMapping("/pokemon/galeria")
+    public String galeria (Model model) {
+        ArrayList<Pokemon> pokemons = pokemonService.findRandomList(12);
+        model.addAttribute("pokemons", pokemons);
+        model.addAttribute("titulo", "Galería de Pokémon");
+        return "galeria-pokemon";
+    }
 
     @GetMapping("/informacion")
     public String informacion(Model model) {
