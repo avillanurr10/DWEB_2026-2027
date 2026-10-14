@@ -11,7 +11,7 @@
 <body>
 <main class="page">
   <header class="topbar">
-    <nav class="nav">
+    <nav class="nav" th:replace="~{fragments :: menu}">
 		<a href="/">Inicio</a>
 		<a href="/pokemon/galeria">Galería</a>
 	</nav>
@@ -44,5 +44,6 @@
     </table>
   </section>
 </main>
+<footer th:replace="~{fragments :: footer}"></footer>
 </body>
 </html>
