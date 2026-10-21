@@ -1,91 +1,90 @@
 <!DOCTYPE html>
-<html lang="es"
-      xmlns:th="http://www.thymeleaf.org">
-
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Fragmentos compartidos de la Pokédex</title>
+</head>
 <body>
 
-<!-- =========================================================
-     MENÚ DE NAVEGACIÓN
-     ========================================================= -->
-<nav th:fragment="menu" style="
-        background-color: #263238;
-        padding: 14px 30px;
-        display: flex;
-        align-items: center;
-        gap: 28px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-     ">
 
-    <a th:href="@{/}"
-       style="
-          color: white;
-          text-decoration: none;
-          font-weight: bold;
-          font-size: 16px;
-       ">
-        Inicio
-    </a>
-
-    <a th:href="@{/informacion}"
-       style="
-          color: white;
-          text-decoration: none;
-          font-weight: bold;
-          font-size: 16px;
-       ">
-        Información
-    </a>
-
-    <a th:href="@{/pokemon/tabla}"
-       style="
-          color: white;
-          text-decoration: none;
-          font-weight: bold;
-          font-size: 16px;
-       ">
-        Lista
-    </a>
-
-    <a th:href="@{/pokemon/galeria}"
-       style="
-          color: white;
-          text-decoration: none;
-          font-weight: bold;
-          font-size: 16px;
-       ">
-        Galería
-    </a>
-
-    <a th:href="@{/pokemon/batalla}"
-       style="
-          color: white;
-          text-decoration: none;
-          font-weight: bold;
-          font-size: 16px;
-       ">
-        Batalla
-    </a>
-
+<nav style="background-color:#263238;padding:14px 30px;display:flex;align-items:center;gap:28px;flex-wrap:wrap;box-shadow:0 2px 5px rgba(0,0,0,.15);" th:fragment="menu">
+    <a th:href="@{/}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Inicio</a>
+    <a th:href="@{/informacion}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Información</a>
+    <a th:href="@{/pokemon/tabla}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Lista</a>
+    <a th:href="@{/pokemon/galeria}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Galería</a>
+    <a href="/pokemon/batalla" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;" th:href="@{/pokemon/batalla}">Batalla</a>
 </nav>
 
+<!-- =========================================================
+     NUEVO FORMULARIO DE BÚSQUEDA (BASE HTML SIN THYMELEAF)
+     - Convertir este bloque en un fragmento Thymeleaf reutilizable.
+     - Sustituir las opciones de tipo de ejemplo por las de PokéAPI.
+     - Configurar la URL del formulario según tabla o galería.
+     - Mantener los valores seleccionados tras cada búsqueda.
+     ========================================================= -->
+<section th:fragment="filtros" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:16px;padding:24px;margin:0 0 24px;box-shadow:0 8px 22px rgba(15,23,42,.08);font-family:'Segoe UI',Arial,sans-serif;color:#172033;">
+    <h2 style="margin:0 0 8px;color:#002855;font-size:1.35rem;">Buscar Pokémon</h2>
+    <p style="margin:0 0 20px;color:#64748b;">Selecciona un tipo, aplica filtros y ordena los resultados.</p>
+
+    <form th:action="@{${formAction}}" method="get">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+            <div style="flex:1 1 180px;min-width:150px;">
+                <label for="tipo" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Tipo de Pokémon</label>
+                <select id="tipo" name="tipo" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit;">
+                    <option value="" th:selected="${tipo == ''}">Aleatorio</option>
+                    <option th:each="tipoDisponible : ${tipos}"
+                            th:value="${tipoDisponible.name}"
+                            th:text="${#strings.capitalize(tipoDisponible.name)}"
+                            th:selected="${tipoDisponible.name == tipo}">Fuego</option>
+                </select>
+            </div>
+
+            <div style="flex:1 1 180px;min-width:150px;">
+                <label for="nombre" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Nombre</label>
+                <input id="nombre" name="nombre" type="text" placeholder="Ej.: char" th:value="${nombre}" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;box-sizing:border-box;">
+            </div>
+
+            <div style="flex:1 1 150px;min-width:130px;">
+                <label for="alturaMin" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Altura mínima (m)</label>
+                <input id="alturaMin" name="alturaMin" type="number" min="0" step="0.1" placeholder="Ej.: 1.2" th:value="${alturaMin}" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;box-sizing:border-box;">
+            </div>
+
+            <div style="flex:1 1 150px;min-width:130px;">
+                <label for="pesoMax" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Peso máximo (kg)</label>
+                <input id="pesoMax" name="pesoMax" type="number" min="0" step="0.1" placeholder="Ej.: 20" th:value="${pesoMax}" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;box-sizing:border-box;">
+            </div>
+
+            <div style="flex:1 1 170px;min-width:150px;">
+                <label for="orden" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Ordenar por</label>
+                <select id="orden" name="orden" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit;">
+                    <option value="" th:selected="${orden == ''}">Sin ordenar</option>
+                    <option value="name" th:selected="${orden == 'name'}">Nombre</option>
+                    <option value="height" th:selected="${orden == 'height'}">Altura</option>
+                    <option value="weight" th:selected="${orden == 'weight'}">Peso</option>
+                </select>
+            </div>
+
+            <div style="flex:1 1 170px;min-width:150px;">
+                <label for="direccion" style="display:block;margin-bottom:6px;font-weight:700;color:#334155;">Dirección</label>
+                <select id="direccion" name="direccion" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit;">
+                    <option value="asc" th:selected="${direccion == 'asc'}">Ascendente</option>
+                    <option value="desc" th:selected="${direccion == 'desc'}">Descendente</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;">
+            <button type="submit" style="background:#002855;color:#fff;border:0;border-radius:8px;padding:11px 22px;font:inherit;font-weight:700;cursor:pointer;">Buscar</button>
+            <a th:href="@{${formAction}}" style="display:inline-block;background:#e2e8f0;color:#334155;text-decoration:none;border-radius:8px;padding:11px 22px;font-weight:700;">Limpiar filtros</a>
+        </div>
+    </form>
+</section>
 
 <!-- =========================================================
-     PIE DE PÁGINA
+     PIE DE PÁGINA 
      ========================================================= -->
-<footer th:fragment="footer" style="
-            margin-top: 40px;
-            padding: 20px;
-            background-color: #263238;
-            color: white;
-            text-align: center;
-            font-size: 14px;
-        ">
-
-    <p style="margin: 0;">
-        Pokédex · Desarrollo Web · 2026
-    </p>
-
+<footer style="margin-top:40px;padding:20px;background-color:#263238;color:white;text-align:center;font-size:14px;" th:fragment="footer">
+    <p style="margin:0;">Pokédex · Desarrollo Web · 2026</p>
 </footer>
-
 </body>
 </html>

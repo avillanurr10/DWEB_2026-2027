@@ -18,7 +18,9 @@
 	<h1 th:text="${titulo}">Galería Pokémon</h1>
 	<p>Descubre una selección aleatoria de Pokémon.</p>
   </header>
-  <section class="cards">
+  <section th:replace="~{fragments :: filtros}"></section>
+  <p th:if="${#lists.isEmpty(pokemons)}" style="padding:18px;background:#fff;border-radius:12px;color:#57534e;">No se encontraron Pokémon con esos filtros.</p>
+  <section class="cards" th:if="${!#lists.isEmpty(pokemons)}">
     <article class="card" th:each="pokemon : ${pokemons}">
 		<div class="card-image"><img th:src="${pokemon.imageURL}" th:alt="${#strings.capitalize(pokemon.name)}" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbasaur"></div>
 		<div class="card-body">
@@ -28,6 +30,7 @@
 				<div class="measure"><span class="label">Altura</span><span class="value" th:text="${#numbers.formatDecimal(pokemon.height / 10.0, 1, 1) + ' m'}">0,7 m</span></div>
 				<div class="measure"><span class="label">Peso</span><span class="value" th:text="${#numbers.formatDecimal(pokemon.weight / 10.0, 1, 1) + ' kg'}">6,9 kg</span></div>
 			</div>
+			<a th:href="@{/pokemon/{id}(id=${pokemon.id})}">Ver detalle</a>
 		</div>
 	</article>
   </section>

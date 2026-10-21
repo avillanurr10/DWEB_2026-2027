@@ -7,6 +7,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
@@ -77,6 +79,55 @@ public class PokemonRepository {
 
     public ArrayList<Pokemon> findAll() {
         return findRandomList(10);
+    }
+
+    @SuppressWarnings("unchecked")
+    public ArrayList<Pokemon.Type> findAllTypes() {
+        Map<String, Object> response = restTemplate.getForObject(
+                POKEMON_API_URL + "/type/?limit=100", Map.class);
+        ArrayList<Pokemon.Type> result = new ArrayList<>();
+        if (response == null) return result;
+
+        List<Map<String, String>> types =
+                (List<Map<String, String>>) response.get("results");
+        if (types == null) return result;
+
+        for (Map<String, String> entry : types) {
+            String name = entry.get("name");
+            if ("unknown".equals(name) || "stellar".equals(name)) continue;
+            Pokemon.Type type = new Pokemon.Type();
+            type.setName(name);
+            type.setUrl(entry.get("url"));
+            result.add(type);
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    public ArrayList<Pokemon> findByType(String typeName, int limit) {
+        ArrayList<Pokemon> result = new ArrayList<>();
+        if (typeName == null || typeName.isBlank() || limit <= 0) return result;
+
+        String normalized = typeName.trim().toLowerCase(Locale.ROOT);
+        Map<String, Object> response = restTemplate.getForObject(
+                POKEMON_API_URL + "/type/" + normalized, Map.class);
+        if (response == null) return result;
+
+        List<Map<String, Object>> entries =
+                (List<Map<String, Object>>) response.get("pokemon");
+        if (entries == null) return result;
+
+        for (Map<String, Object> entry : entries) {
+            if (result.size() >= limit) break;
+            Map<String, String> reference =
+                    (Map<String, String>) entry.get("pokemon");
+            if (reference == null) continue;
+            String name = reference.get("name");
+            if (name == null) continue;
+            Pokemon pokemon = findByName(name);
+            if (pokemon != null) result.add(pokemon);
+        }
+        return result;
     }
 }
 

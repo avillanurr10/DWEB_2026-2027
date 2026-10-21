@@ -1,0 +1,95 @@
+RA7 - TAREA 1 - Filtros y ordenación:
+Formulario → Controller → Service → Repository → PokéAPI
+                                     ← datos del Pokémon
+                         Controller → Thymeleaf → página HTML
+1. El formulario envía los criterios
+El formulario está definido una sola vez en fragments.html, dentro de:
+<section th:fragment="filtros">
+Las páginas de tabla y galería lo insertan con:
+<section th:replace="~{fragments :: filtros}"></section>
+th:replace significa: pon aquí el fragmento llamado filtros. Así el formulario no se copia en dos archivos.
+Cada campo tiene un name, por ejemplo:
+<input name="nombre">
+Ese nombre determina cómo llega el valor a Java. El formulario usa method="get", así que los valores aparecen en la dirección de la página. Una búsqueda puede quedar así:
+/pokemon/tabla?tipo=fire&nombre=char
+2. El Controller recibe la petición
+En PokemonController.java, esta anotación conecta una dirección con un método:
+@GetMapping("/pokemon/tabla")
+Los parámetros del formulario llegan a los argumentos anotados con @RequestParam:
+@RequestParam(name = "nombre", required = false) String nombre
+Eso significa: «recibe el parámetro nombre; puede no venir». Si el formulario no envía ningún nombre, nombre será null.
+La tabla y la galería tienen parámetros iguales porque aceptan los mismos filtros. Se diferencian en la lista inicial: la tabla pide 10 Pokémon aleatorios y la galería 12.
+3. El ? decide qué lista obtener
+En el código aparece esta expresión:
+(tipo == null || tipo.isBlank())
+    ? pokemonService.findRandomList(10)
+    : pokemonService.findByType(tipo);
+Léela así:
+Si no se eligió ningún tipo, pide 10 Pokémon aleatorios. Si sí se eligió, pide Pokémon de ese tipo.
+
+En Java, condición ? opciónA : opciónB significa «si la condición es cierta, usa A; si no, usa B».
+- tipo == null significa que el parámetro no llegó.
+- tipo.isBlank() comprueba si está vacío o contiene solo espacios.
+- || significa o. Basta con que una de esas dos condiciones sea cierta.
+En la galería se usa la misma decisión, pero se piden 12 Pokémon cuando el tipo está vacío.
+4. filtrarYOrdenar prepara la lista
+Las dos rutas llaman al mismo método:
+ArrayList<Pokemon> pokemons =
+    filtrarYOrdenar(base, nombre, alturaMin, pesoMax, orden, direccion);
+base es la lista obtenida en el paso anterior. El método crea una copia:
+ArrayList<Pokemon> resultado = new ArrayList<>(pokemons);
+Así puede quitar elementos de resultado sin alterar la lista original. Después aplica los filtros:
+- Si escribiste un nombre, quita los Pokémon cuyo nombre no contiene ese texto.
+- Si indicaste una altura mínima, quita los que sean más bajos.
+- Si indicaste un peso máximo, quita los que pesen más.
+Por ejemplo:
+if (nombre != null && !nombre.isBlank()) {
+se lee:
+Si nombre existe y no está vacío, aplica el filtro por nombre.
+
+&& significa y. ! significa no. Por eso !nombre.isBlank() quiere decir «el nombre no está vacío».
+En el filtro de nombre, Java pasa ambos textos a minúsculas antes de buscar. Así, char puede coincidir con Charmander. contains significa «contiene».
+La API guarda altura y peso en décimas: por ejemplo, altura 17 significa 1,7 m. Por eso el código divide entre 10.0 al aplicar los filtros, para comparar con las unidades del formulario.
+5. Los comparadores ordenan los resultados
+Si elegiste ordenar, el Controller escoge un comparador:
+if ("name".equalsIgnoreCase(orden)) {
+    comparador = new PokemonNameComparator();
+} else if ("height".equalsIgnoreCase(orden)) {
+    comparador = new PokemonHeightComparator();
+} else if ("weight".equalsIgnoreCase(orden)) {
+    comparador = new PokemonWeightComparator();
+}
+Cada clase sabe comparar una propiedad:
+- PokemonNameComparator: nombres.
+- PokemonHeightComparator: alturas.
+- PokemonWeightComparator: pesos.
+Luego se ordena la lista:
+resultado.sort(comparador);
+Si pediste orden descendente, se invierte:
+comparador = comparador.reversed();
+Al final, el método devuelve resultado, que ya contiene los Pokémon filtrados y ordenados.
+6. El Controller entrega la lista a la vista
+Esta línea guarda la lista con la etiqueta pokemons:
+model.addAttribute("pokemons", pokemons);
+El modelo funciona como una caja de datos: dentro pone una lista llamada pokemons. El Controller devuelve el nombre de la plantilla:
+return "listado-tabla";
+Spring abre listado-tabla.html y Thymeleaf puede leer los datos que hay en el modelo.
+7. Thymeleaf pinta la tabla o las tarjetas
+En la tabla, una fila se repite por cada elemento de la lista:
+<tr th:each="pokemon : ${pokemons}">
+Significa:
+Por cada Pokémon de pokemons, crea una fila. Dentro de esa fila, llama pokemon al elemento actual.
+
+Luego una celda muestra su nombre:
+<td th:text="${#strings.capitalize(pokemon.name)}">Bulbasaur</td>
+th:text reemplaza el texto de ejemplo Bulbasaur por el nombre real. La galería hace lo mismo con una tarjeta por Pokémon.
+Para mostrar sus medidas, se convierten a metros y kilogramos y se formatean:
+${#numbers.formatDecimal(pokemon.height / 10.0, 1, 1)}
+En el formulario, th:value vuelve a mostrar lo que escribiste y th:selected mantiene seleccionadas las opciones. #lists.isEmpty(pokemons) comprueba si la lista quedó vacía y permite mostrar el aviso de «No se encontraron Pokémon».
+8. Cómo funciona «Ver detalle»
+El enlace construye una dirección con el ID del Pokémon:
+<a th:href="@{/pokemon/{id}(id=${pokemon.id})}">Ver detalle</a>
+Si su ID es 6, el enlace lleva a /pokemon/6. Esta ruta del Controller recibe el número con @PathVariable:
+@GetMapping("/pokemon/{id}")
+public String detallePokemon(@PathVariable("id") int id, Model model)
+Después busca el Pokémon con findById(id) y devuelve informacion.html. La ruta /informacion sigue funcionando aparte y continúa mostrando un Pokémon aleatorio.
