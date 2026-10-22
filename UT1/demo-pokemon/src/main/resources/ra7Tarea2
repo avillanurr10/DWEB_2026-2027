@@ -1,0 +1,55 @@
+La idea general: sesión y modelo
+La sesión es el sitio donde el servidor recuerda los datos del entrenador entre visitas a distintas páginas. En este trabajo guardamos dos cosas:
+- "entrenador": el nombre, por ejemplo, "Ash".
+- "equipo": una lista de objetos Pokemon.
+El Model sirve para pasar datos a una página concreta. Por ejemplo, el controlador puede poner el entrenador y el equipo en el Model, y Thymeleaf los usa para pintar equipo.html.
+1. Entrar en Equipo
+En [PokemonController.java (line 84)](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/java/es/mariana/dweb/controller/PokemonController.java:84) está el método que atiende GET /pokemon/equipo.
+Cuando recibe esa petición:
+1. Lee "entrenador" de la sesión.
+2. Busca la lista "equipo" de la sesión.
+3. Pasa esos datos al Model.
+4. Devuelve "equipo", que hace que Spring abra equipo.html.
+obtenerEquipo(session) se ocupa de conseguir la lista. Si aún no existe y hay entrenador, crea una lista vacía y la guarda en la sesión.
+2. Mostrar el formulario o el equipo
+En [equipo.html (line 43)](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/equipo.html:43) usamos dos condiciones:
+th:if="${entrenador == null}"
+significa «muestra esta sección si todavía no hay entrenador».
+th:if="${entrenador != null}"
+significa «muestra esta sección si sí hay entrenador».
+Por eso la misma página sirve para registrar al entrenador y, después, ver su equipo. El contador usa el tamaño de la lista: #lists.size(equipo). El aviso de equipo vacío usa #lists.isEmpty(equipo).
+Cuando la lista tiene Pokémon, Thymeleaf repite la tarjeta con:
+th:each="pokemon : ${equipo}"
+En cada repetición, la variable pokemon representa un miembro distinto de la lista.
+3. Registrar al entrenador
+El formulario de equipo.html envía el campo nombre por POST a /pokemon/entrenador.
+En el método registrarEntrenador del controlador:
+1. @RequestParam recibe lo que se escribió en el campo nombre.
+2. nombre.isBlank() comprueba si está vacío o contiene solo espacios.
+3. Si no es válido, se añade errorRegistro al modelo y se vuelve a equipo.html.
+4. Si es válido, nombre.trim() quita los espacios sobrantes de los extremos.
+5. session.setAttribute("entrenador", ...) guarda el nombre.
+6. session.setAttribute("equipo", new ArrayList<Pokemon>()) crea su equipo vacío.
+7. redirect:/pokemon/equipo hace una nueva petición GET para mostrar la vista ya registrada.
+POST se usa porque el formulario está cambiando los datos guardados en la sesión.
+4. Mostrar entrenador y cerrar sesión desde el menú
+En [fragments.html (line 10)](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/fragments.html:10) añadimos el enlace Equipo, el nombre del entrenador y el formulario de Cerrar sesión.
+El método marcado con @ModelAttribute("entrenador") lee el nombre de la sesión y lo deja disponible para el menú en todas las páginas de este controlador. Así no hay que añadir el nombre manualmente en cada vista.
+El menú usa th:if para ocultar el nombre y el formulario de cierre cuando no hay entrenador. Al cerrar sesión, el controlador ejecuta session.invalidate(): elimina la sesión completa, incluidos el entrenador y su equipo.
+5. Añadir Pokémon desde la tabla o la galería
+En [listado-tabla.html (line 52)](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/listado-tabla.html:52) y [galeria-pokemon.html (line 38)](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/galeria-pokemon.html:38), cada Pokémon tiene un formulario Añadir al equipo. Solo aparece si hay entrenador.
+El formulario envía el identificador del Pokémon por POST a /pokemon/equipo/agregar. También manda el origen y los filtros actuales, para que al volver a la lista se mantenga la búsqueda.
+El método agregarPokemon hace estas comprobaciones:
+1. Si no hay entrenador, vuelve a Equipo.
+2. Busca si ya existe en la lista un Pokémon con el mismo identificador. Si existe, muestra un error.
+3. Comprueba si el equipo ya tiene seis miembros. Si los tiene, muestra el aviso de equipo completo.
+4. Si pasa las dos comprobaciones, llama a pokemonService.findById(id) para obtener el Pokémon y añadirlo a la lista de la sesión.
+Los errores se guardan como mensajes temporales con RedirectAttributes. Después se vuelve a tabla o galería, y sus plantillas muestran el mensaje si existe.
+6. Eliminar un Pokémon
+El botón Eliminar de cada tarjeta envía su identificador por POST a /pokemon/equipo/eliminar.
+El controlador busca en la lista el miembro cuyo identificador coincida y lo elimina. Los demás Pokémon permanecen en la lista. Luego vuelve a la página Equipo.
+7. Combatir con un Pokémon del equipo
+El botón Combatir construye una dirección que incluye el identificador del Pokémon, por ejemplo:
+/pokemon/equipo/combate/25
+En el controlador, @PathVariable int id recoge el 25 de la dirección. Se comprueba que ese Pokémon pertenezca al equipo; luego se busca por identificador para asignarlo a pokemon1 y se obtiene un rival aleatorio para pokemon2.
+Finalmente se devuelve batalla-pokemon.html, que ya sabe mostrar esos dos objetos y calcular el resultado. No cambiamos las reglas de esa batalla.

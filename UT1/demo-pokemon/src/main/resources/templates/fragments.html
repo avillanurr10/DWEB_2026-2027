@@ -13,6 +13,18 @@
     <a th:href="@{/pokemon/tabla}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Lista</a>
     <a th:href="@{/pokemon/galeria}" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">Galería</a>
     <a href="/pokemon/batalla" style="color:white;text-decoration:none;font-weight:bold;font-size:16px;" th:href="@{/pokemon/batalla}">Batalla</a>
+    <a th:href="@{/pokemon/equipo}"
+       style="color:white;text-decoration:none;font-weight:bold;font-size:16px;">
+        Equipo
+    </a>
+    <span th:if="${entrenador != null}" style="color:white;margin-left:auto;">
+        Entrenador: <strong th:text="${entrenador}">Nombre</strong>
+    </span>
+    <form th:if="${entrenador != null}" th:action="@{/pokemon/entrenador/salir}" method="post" style="margin:0;">
+        <button type="submit" style="padding:9px 14px;border:0;border-radius:8px;background:#be123c;color:white;font-weight:700;cursor:pointer;">
+            Cerrar sesión
+        </button>
+    </form>
 </nav>
 
 <!-- =========================================================
@@ -81,7 +93,7 @@
 </section>
 
 <!-- =========================================================
-     PIE DE PÁGINA 
+     PIE DE PÁGINA
      ========================================================= -->
 <footer style="margin-top:40px;padding:20px;background-color:#263238;color:white;text-align:center;font-size:14px;" th:fragment="footer">
     <p style="margin:0;">Pokédex · Desarrollo Web · 2026</p>

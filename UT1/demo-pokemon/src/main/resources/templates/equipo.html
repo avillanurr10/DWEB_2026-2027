@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi equipo Pokémon</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef6ff;color:#172033;font-family:"Segoe UI",Arial,sans-serif}
+    .page{width:min(1100px,calc(100% - 32px));margin:32px auto 50px}
+    .hero{padding:28px;border-radius:18px;background:linear-gradient(135deg,#002855,#0369a1);color:white;margin-bottom:24px}
+    .hero h1{margin:0 0 8px}.hero p{margin:0;color:#dbeafe}
+    .panel{background:white;border:1px solid #cbd5e1;border-radius:18px;padding:26px;margin-bottom:24px;box-shadow:0 8px 22px #0f172a10}
+    h2{color:#002855;margin:0 0 16px}.field{display:block;font-weight:700;margin:0 0 8px}
+    input{padding:12px;border:1px solid #94a3b8;border-radius:8px;font:inherit;width:min(100%,420px)}
+    button{padding:11px 18px;border:0;border-radius:9px;background:#002855;color:white;font:inherit;font-weight:700;cursor:pointer}
+    .button-danger{background:#be123c}.button-secondary{background:#0369a1}
+    .form-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+    .card{border:1px solid #cbd5e1;border-radius:16px;overflow:hidden;background:#fff}
+    .image{min-height:190px;display:grid;place-items:center;background:#e0f2fe}
+    .image img{width:150px;height:150px;object-fit:contain;image-rendering:pixelated}
+    .card-body{padding:18px}.card h3{color:#002855;margin:4px 0 12px;text-transform:capitalize}
+    .number{color:#64748b;font-size:.8rem;font-weight:800}.stats{color:#475569;margin-bottom:16px}
+    .actions{display:flex;flex-wrap:wrap;gap:8px}.actions form{margin:0}
+    .empty{background:#f8fafc;padding:20px;border:1px dashed #94a3b8;border-radius:10px}
+  </style>
+</head>
+<body>
+<div th:replace="~{fragments :: menu}"></div>
+<main class="page">
+  <header class="hero">
+    <h1>Mi equipo Pokémon</h1>
+    <p>Registra tu entrenador, reúne hasta seis Pokémon y prepárate para combatir.</p>
+  </header>
+    <p role="alert"
+       th:if="${errorRegistro != null}"
+       th:text="${errorRegistro}">
+    </p>
+
+
+
+  <!-- ESTADO 1: SIN ENTRENADOR.
+       TAREA: mostrar esta sección únicamente cuando no haya entrenador en sesión. -->
+    <section class="panel" th:if="${entrenador == null}">
+    <h2>Registrar entrenador</h2>
+    <p>Introduce un nombre para comenzar tu aventura.</p>
+    <!-- TAREA: adaptar action y campos según el controlador. -->
+    <form action="/pokemon/entrenador" method="post">
+      <label class="field" for="nombreEntrenador">Nombre del entrenador</label>
+      <div class="form-row">
+        <input type="text" id="nombreEntrenador" name="nombre" placeholder="Ej.: Ash" maxlength="50">
+        <button type="submit">Guardar entrenador</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ESTADO 2: CON ENTRENADOR.
+       TAREA: mostrar esta sección únicamente cuando haya entrenador en sesión. -->
+    <section class="panel" th:if="${entrenador != null}">
+    <div class="form-row" style="justify-content:space-between;">
+      <div>
+          <h2>Equipo de <span th:text="${entrenador}">Entrenador</span></h2>
+          <p>Pokémon en el equipo:
+              <strong th:text="${#lists.size(equipo)} + ' / 6'">0 / 6</strong>
+          </p>
+      </div>
+    </div>
+
+    <!-- TAREA: mostrar este mensaje solo si el equipo está vacío. -->
+        <p class="empty" th:if="${#lists.isEmpty(equipo)}">
+            Todavía no tienes Pokémon. Visita la tabla o la galería para añadirlos.
+        </p>
+
+    <!-- TAREA: sustituir estas tarjetas de ejemplo por un bucle Thymeleaf.
+         Se debe mostrar una tarjeta por cada Pokémon del equipo. -->
+        <div class="cards" th:if="${!#lists.isEmpty(equipo)}">
+            <article class="card" th:each="pokemon : ${equipo}">
+                <div class="image">
+                    <img
+                            th:src="${pokemon.imageURL}"
+                            th:alt="${pokemon.name}">
+                </div>
+
+                <div class="card-body">
+      <span class="number"
+            th:text="'N.º ' + ${#numbers.formatInteger(pokemon.id, 4)}">N.º 0001</span>
+                    <h3 th:text="${pokemon.name}">Nombre</h3>
+                    <p class="stats"
+                       th:text="'Altura: ' + ${pokemon.height / 10.0} + ' m · Peso: ' + ${pokemon.weight / 10.0} + ' kg'">
+                        Altura y peso
+                    </p>
+
+                    <div class="actions">
+                        <a class="button-secondary" style="display:inline-block;padding:11px 18px;border-radius:9px;color:white;text-decoration:none;font-weight:700;"
+                           th:href="@{/pokemon/equipo/combate/{id}(id=${pokemon.id})}">⚔ Combatir</a>
+                        <form action="/pokemon/equipo/eliminar" method="post">
+                            <input type="hidden" name="id" th:value="${pokemon.id}">
+                            <button class="button-danger" type="submit">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        </div>
+  </section>
+</main>
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

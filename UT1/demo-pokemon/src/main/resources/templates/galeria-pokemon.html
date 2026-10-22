@@ -18,6 +18,10 @@
 	<h1 th:text="${titulo}">Galería Pokémon</h1>
 	<p>Descubre una selección aleatoria de Pokémon.</p>
   </header>
+  <section th:if="${mensajeError != null}" role="alert" style="background:#fff1f2;border-left:5px solid #be123c;border-radius:10px;padding:16px 20px;margin-bottom:24px;color:#9f1239;">
+    <strong>No se ha podido añadir el Pokémon</strong>
+    <p style="margin:6px 0 0;" th:text="${mensajeError}">Este Pokémon ya pertenece a tu equipo.</p>
+  </section>
   <section th:replace="~{fragments :: filtros}"></section>
   <p th:if="${#lists.isEmpty(pokemons)}" style="padding:18px;background:#fff;border-radius:12px;color:#57534e;">No se encontraron Pokémon con esos filtros.</p>
   <section class="cards" th:if="${!#lists.isEmpty(pokemons)}">
@@ -31,6 +35,17 @@
 				<div class="measure"><span class="label">Peso</span><span class="value" th:text="${#numbers.formatDecimal(pokemon.weight / 10.0, 1, 1) + ' kg'}">6,9 kg</span></div>
 			</div>
 			<a th:href="@{/pokemon/{id}(id=${pokemon.id})}">Ver detalle</a>
+			<form th:if="${entrenador != null}" th:action="@{/pokemon/equipo/agregar}" method="post" style="margin-top:12px;">
+                <input type="hidden" name="id" th:value="${pokemon.id}">
+                <input type="hidden" name="origen" value="/pokemon/galeria">
+                <input type="hidden" name="tipo" th:value="${tipo}">
+                <input type="hidden" name="nombre" th:value="${nombre}">
+                <input type="hidden" name="alturaMin" th:value="${alturaMin}">
+                <input type="hidden" name="pesoMax" th:value="${pesoMax}">
+                <input type="hidden" name="orden" th:value="${orden}">
+                <input type="hidden" name="direccion" th:value="${direccion}">
+                <button type="submit">Añadir al equipo</button>
+            </form>
 		</div>
 	</article>
   </section>
