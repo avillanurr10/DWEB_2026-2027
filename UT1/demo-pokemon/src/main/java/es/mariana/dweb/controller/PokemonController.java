@@ -1,17 +1,20 @@
 package es.mariana.dweb.controller;
 
+import es.mariana.dweb.exception.EntrenadorException;
+import es.mariana.dweb.model.entities.Entrenador;
 import es.mariana.dweb.model.entities.Pokemon;
 import es.mariana.dweb.model.entities.PokemonHeightComparator;
 import es.mariana.dweb.model.entities.PokemonNameComparator;
 import es.mariana.dweb.model.entities.PokemonWeightComparator;
+import es.mariana.dweb.model.service.EntrenadorService;
 import es.mariana.dweb.model.service.PokemonService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -24,24 +27,26 @@ import java.util.Locale;
 
 @Controller
 public class PokemonController {
-
-    /*/pokemon/6 → Controller → Service → Repository → PokéAPI
-                                     ← Pokemon ←  */
     @Autowired
     private PokemonService pokemonService;
 
+    @Autowired
+    // Servicio que aplica las reglas y guarda el equipo del entrenador en SQLite.
+    private EntrenadorService entrenadorService;
+
+    // Hace que el entrenador seleccionado esté disponible en el menú de estas vistas.
     @ModelAttribute("entrenador")
-    public String entrenadorEnMenu(HttpSession session) {
-        return (String) session.getAttribute("entrenador");
+    public Entrenador entrenadorEnMenu(HttpSession session) {
+        return (Entrenador) session.getAttribute("entrenador");
     }
 
     @GetMapping("/")
     public String home(Model model) {
         ArrayList<Pokemon> pokemons = pokemonService.obtenerPokemons();
         model.addAttribute("pokemons", pokemons);
-
         return "home";
     }
+
     @GetMapping("/pokemon/tabla")
     public String listadoTabla(
             @RequestParam(name = "tipo", required = false) String tipo,
@@ -59,7 +64,6 @@ public class PokemonController {
         model.addAttribute("titulo", "Pokémon en formato tabla");
         model.addAttribute("fechaHora", LocalDateTime.now());
         agregarFiltrosAlModelo(model, tipo, nombre, alturaMin, pesoMax, orden, direccion, "/pokemon/tabla");
-
         return "listado-tabla";
     }
 
@@ -81,33 +85,22 @@ public class PokemonController {
         agregarFiltrosAlModelo(model, tipo, nombre, alturaMin, pesoMax, orden, direccion, "/pokemon/galeria");
         return "galeria-pokemon";
     }
+
+    // Convierte los IDs del entrenador en objetos Pokemon para pintarlos en la vista.
     @GetMapping("/pokemon/equipo")
     public String equipo(HttpSession session, Model model) {
-        String entrenador = (String) session.getAttribute("entrenador");
-        model.addAttribute("entrenador", entrenador);
-        ArrayList<Pokemon> equipo = obtenerEquipo(session);
-        model.addAttribute("equipo", equipo);
+        Entrenador entrenador = (Entrenador) session.getAttribute("entrenador");
+        ArrayList<Pokemon> pokemonsEquipo = new ArrayList<>();
+        if (entrenador != null && entrenador.getEquipo() != null) {
+            for (Integer idPokemon : entrenador.getEquipo()) {
+                pokemonsEquipo.add(pokemonService.findById(idPokemon));
+            }
+        }
+        model.addAttribute("equipo", pokemonsEquipo);
         return "equipo";
     }
-    @PostMapping("/pokemon/entrenador")
-    public String registrarEntrenador(
-            @RequestParam(name = "nombre", required = false) String nombre,
-            HttpSession session,
-            Model model) {
 
-        if (nombre == null || nombre.isBlank()) {
-            model.addAttribute("entrenador", null);
-            model.addAttribute("equipo", new ArrayList<Pokemon>());
-            model.addAttribute("errorRegistro", "Escribe un nombre para el entrenador.");
-            return "equipo";
-        }
-
-        session.setAttribute("entrenador", nombre.trim());
-        session.setAttribute("equipo", new ArrayList<Pokemon>());
-
-        return "redirect:/pokemon/equipo";
-    }
-
+    // El servicio comprueba duplicados y el límite; aquí guardamos el entrenador actualizado en la sesión.
     @PostMapping("/pokemon/equipo/agregar")
     public String agregarPokemon(
             @RequestParam int id,
@@ -120,63 +113,54 @@ public class PokemonController {
             @RequestParam(name = "direccion", required = false) String direccion,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
-
-        if (session.getAttribute("entrenador") == null) {
-            return "redirect:/pokemon/equipo";
+        Entrenador entrenador = (Entrenador) session.getAttribute("entrenador");
+        if (entrenador == null) {
+            return "redirect:/entrenadores";
         }
 
-        ArrayList<Pokemon> equipo = obtenerEquipo(session);
-        if (equipo.stream().anyMatch(pokemon -> pokemon.getId() == id)) {
-            redirectAttributes.addFlashAttribute("mensajeError", "Este Pokémon ya pertenece a tu equipo.");
-        } else if (equipo.size() >= 6) {
-            redirectAttributes.addFlashAttribute("mensajeError", "Tu equipo ya tiene seis Pokémon.");
-        } else {
-            equipo.add(pokemonService.findById(id));
+        try {
+            Entrenador actualizado = entrenadorService.anadirPokemon(entrenador.getId(), id);
+            session.setAttribute("entrenador", actualizado);
+        } catch (EntrenadorException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
         }
 
         return redireccionListado(origen, tipo, nombre, alturaMin, pesoMax, orden, direccion);
     }
 
+    // El servicio quita el Pokémon de SQLite y devuelve la versión actualizada del entrenador.
     @PostMapping("/pokemon/equipo/eliminar")
-    public String eliminarPokemon(@RequestParam int id, HttpSession session) {
-        if (session.getAttribute("entrenador") != null) {
-            obtenerEquipo(session).removeIf(pokemon -> pokemon.getId() == id);
+    public String eliminarPokemon(@RequestParam int id,
+                                  HttpSession session,
+                                  RedirectAttributes redirectAttributes) {
+        Entrenador entrenador = (Entrenador) session.getAttribute("entrenador");
+        if (entrenador == null) {
+            return "redirect:/entrenadores";
+        }
+
+        try {
+            Entrenador actualizado = entrenadorService.quitarPokemon(entrenador.getId(), id);
+            session.setAttribute("entrenador", actualizado);
+        } catch (EntrenadorException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
         }
         return "redirect:/pokemon/equipo";
     }
 
+    // El elegido es pokemon1 y el rival aleatorio es pokemon2.
     @GetMapping("/pokemon/equipo/combate/{id}")
     public String batallaDesdeEquipo(@PathVariable int id, HttpSession session, Model model) {
-        if (session.getAttribute("entrenador") == null
-                || obtenerEquipo(session).stream().noneMatch(pokemon -> pokemon.getId() == id)) {
+        Entrenador entrenador = (Entrenador) session.getAttribute("entrenador");
+        if (entrenador == null || entrenador.getEquipo() == null || !entrenador.getEquipo().contains(id)) {
             return "redirect:/pokemon/equipo";
         }
 
-        Pokemon pokemon1 = pokemonService.findById(id);
-        Pokemon pokemon2 = pokemonService.findRandom();
-        model.addAttribute("pokemon1", pokemon1);
-        model.addAttribute("pokemon2", pokemon2);
+        model.addAttribute("pokemon1", pokemonService.findById(id));
+        model.addAttribute("pokemon2", pokemonService.findRandom());
         return "batalla-pokemon";
     }
 
-    @PostMapping("/pokemon/entrenador/salir")
-    public String cerrarSesion(HttpSession session) {
-        session.invalidate();
-        return "redirect:/pokemon/equipo";
-    }
-
-    @SuppressWarnings("unchecked")
-    private ArrayList<Pokemon> obtenerEquipo(HttpSession session) {
-        ArrayList<Pokemon> equipo = (ArrayList<Pokemon>) session.getAttribute("equipo");
-        if (equipo == null) {
-            equipo = new ArrayList<>();
-            if (session.getAttribute("entrenador") != null) {
-                session.setAttribute("equipo", equipo);
-            }
-        }
-        return equipo;
-    }
-
+    // Vuelve al listado de origen conservando los filtros que había aplicado el usuario.
     private String redireccionListado(String origen, String tipo, String nombre,
                                       Double alturaMin, Double pesoMax,
                                       String orden, String direccion) {
@@ -195,7 +179,6 @@ public class PokemonController {
                                                Double alturaMin, Double pesoMax,
                                                String orden, String direccion) {
         ArrayList<Pokemon> resultado = new ArrayList<>(pokemons);
-
         if (nombre != null && !nombre.isBlank()) {
             String nombreBuscado = nombre.trim().toLowerCase(Locale.ROOT);
             resultado.removeIf(pokemon -> pokemon.getName() == null
@@ -216,7 +199,6 @@ public class PokemonController {
         } else if ("weight".equalsIgnoreCase(orden)) {
             comparador = new PokemonWeightComparator();
         }
-
         if (comparador != null) {
             if ("desc".equalsIgnoreCase(direccion)) {
                 comparador = comparador.reversed();
@@ -241,32 +223,26 @@ public class PokemonController {
 
     @GetMapping("/pokemon/batalla")
     public String batalla(Model model) {
-        Pokemon pokemon1 = pokemonService.findRandom();
-        Pokemon pokemon2 = pokemonService.findRandom();
-        model.addAttribute("pokemon1", pokemon1);
-        model.addAttribute("pokemon2", pokemon2);
+        model.addAttribute("pokemon1", pokemonService.findRandom());
+        model.addAttribute("pokemon2", pokemonService.findRandom());
         return "batalla-pokemon";
     }
 
     @GetMapping("/informacion")
     public String informacion(Model model) {
-        Pokemon pokemon = pokemonService.findRandom();
         model.addAttribute("titulo", "Pokémon destacado");
         model.addAttribute("presentacion", "Conoce los datos principales de uno de los Pokémon disponibles en nuestra Pokédex.");
         model.addAttribute("fechaHora", LocalDateTime.now());
-        model.addAttribute("pokemon", pokemon);
-
+        model.addAttribute("pokemon", pokemonService.findRandom());
         return "informacion";
     }
 
     @GetMapping("/pokemon/{id}")
     public String detallePokemon(@PathVariable("id") int id, Model model) {
-        Pokemon pokemon = pokemonService.findById(id);
         model.addAttribute("titulo", "Detalle de Pokémon");
         model.addAttribute("presentacion", "Consulta los datos principales de este Pokémon.");
         model.addAttribute("fechaHora", LocalDateTime.now());
-        model.addAttribute("pokemon", pokemon);
+        model.addAttribute("pokemon", pokemonService.findById(id));
         return "informacion";
     }
-
 }

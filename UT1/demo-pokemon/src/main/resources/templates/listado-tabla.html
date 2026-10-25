@@ -49,6 +49,7 @@
 			<td th:text="${pokemon.baseExperience + ' puntos'}">64 puntos</td>
 			<td><a th:href="@{/pokemon/{id}(id=${pokemon.id})}">Ver detalle</a></td>
 			<td>
+              <!-- El botón solo se ofrece si hay entrenador seleccionado. -->
               <form th:if="${entrenador != null}" th:action="@{/pokemon/equipo/agregar}" method="post">
                 <input type="hidden" name="id" th:value="${pokemon.id}">
                 <input type="hidden" name="origen" value="/pokemon/tabla">

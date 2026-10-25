@@ -1,0 +1,45 @@
+La idea principal
+Antes, el equipo vivía en la sesión como una lista. Ahora SQLite guarda permanentemente los entrenadores y sus equipos. La sesión solo recuerda qué entrenador se ha seleccionado.
+
+Piensa en las responsabilidades así:
+- EntrenadorRepository lee y escribe datos en SQLite.
+- EntrenadorService aplica las reglas: nombre obligatorio, tipo permitido, nombre único, Pokémon no repetidos y máximo seis.
+- Los controladores reciben las peticiones de las páginas y llaman al servicio.
+- Thymeleaf recibe los datos y genera el HTML que ves.
+Crear, editar y eliminar entrenadores
+En [EntrenadorController.java](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/java/es/mariana/dweb/controller/EntrenadorController.java) completé las rutas:
+- GET /entrenadores/nuevo prepara el formulario vacío.
+- GET /entrenadores/{id}/editar busca el entrenador y carga sus datos en el formulario.
+- POST /entrenadores/guardar crea o edita: si recibe un ID llama a servicio.editar; si no recibe ID llama a servicio.crear.
+- POST /entrenadores/eliminar elimina al entrenador. Si era el seleccionado, también lo quita de la sesión.
+- El listado, la selección y la salida que traía el ZIP se mantienen.
+El controlador no repite las reglas de negocio: llama al EntrenadorService. Si el servicio lanza EntrenadorException, el controlador captura el mensaje. Al guardar, vuelve al formulario con el nombre y el tipo que habías introducido para que no tengas que escribirlos otra vez.
+
+Si editas al entrenador seleccionado, el servicio devuelve el objeto actualizado y el controlador reemplaza el objeto de la sesión. Así el menú y el equipo muestran el nombre nuevo.
+El formulario sirve para crear y editar
+En [formulario-entrenador.html](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/formulario-entrenador.html), el formulario siempre envía a /entrenadores/guardar.
+- En una creación no hay ID oculto, así que el controlador sabe que debe crear.
+- En una edición aparece un campo oculto con el ID, así que el controlador sabe qué entrenador actualizar.
+- Las opciones del tipo se generan desde EntrenadorService.TIPOS.
+- Si hay un error, se muestra en la página y se conservan los datos.
+El menú y el entrenador seleccionado
+En [fragments.html](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/fragments.html) añadí Entrenadores al menú y cambié el formulario de cierre de sesión para que envíe a /entrenadores/salir.
+
+La sesión ahora guarda un objeto completo Entrenador, no solo el nombre. Por eso el menú muestra ${entrenador.nombre}. Cerrar sesión quita ese objeto de la sesión; no borra al entrenador ni su equipo de SQLite.
+Cómo se muestra y guarda el equipo
+En [PokemonController.java](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/java/es/mariana/dweb/controller/PokemonController.java), GET /pokemon/equipo lee el objeto seleccionado de la sesión. Ese objeto tiene una lista de identificadores, por ejemplo [1, 25]. El controlador busca cada Pokémon con PokemonService y pasa los objetos a la página.
+
+Al añadir un Pokémon desde la tabla o la galería:
+1. El formulario envía su ID por POST.
+2. El controlador llama a EntrenadorService.anadirPokemon.
+3. El servicio comprueba que no esté repetido y que el equipo no supere seis.
+4. Si se puede añadir, SQLite lo guarda y el servicio devuelve el entrenador actualizado.
+5. El controlador reemplaza el objeto de la sesión por ese objeto actualizado.
+Al quitarlo ocurre lo mismo con quitarPokemon: se modifica SQLite y se actualiza el entrenador guardado en la sesión. Si el servicio encuentra un error, la página muestra su mensaje. Los campos ocultos de los filtros permiten volver a la lista conservando la búsqueda y el orden.
+
+En [equipo.html](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/templates/equipo.html) hay dos estados:
+- Sin entrenador: aparece el enlace para abrir el listado.
+- Con entrenador: aparecen su nombre, el contador y una tarjeta por Pokémon. Cada tarjeta permite eliminarlo o combatir.
+Combatir mantiene batalla-pokemon.html: el Pokémon elegido pasa a pokemon1 y el rival se obtiene al azar para pokemon2.
+SQLite
+Añadí el driver sqlite-jdbc al [pom.xml](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/pom.xml) y la ruta a la base de datos en [application.properties](C:/Users/andon/Desktop/Repos2627/DWEB_2026-2027/UT1/demo-pokemon/src/main/resources/application.properties). pokemon.db está en la raíz del proyecto, de acuerdo con el README del ZIP.

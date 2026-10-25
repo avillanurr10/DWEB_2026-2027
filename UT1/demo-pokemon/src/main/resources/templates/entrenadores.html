@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entrenadores Pokémon</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef5fb;color:#183153;font-family:Arial,sans-serif}.wrap{max-width:1050px;margin:42px auto;padding:0 20px}header{background:#002855;color:white;padding:28px 32px;border-radius:14px 14px 0 0}header h1{margin:0 0 8px}header p{margin:0;color:#d7e8f6}.content{background:white;border-radius:0 0 14px 14px;padding:28px;box-shadow:0 6px 24px #1831531a}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}.btn{display:inline-block;padding:9px 15px;border:0;border-radius:7px;background:#0877a8;color:white;text-decoration:none;font-weight:bold;cursor:pointer}.btn.secondary{background:#e7f1fa;color:#002855}.btn.danger{background:#a72841}.btn:disabled{background:#c9d5df;color:#52697b;cursor:default}.list{display:grid;gap:12px}.item{display:flex;align-items:center;gap:18px;border:1px solid #d9e5ef;border-radius:12px;padding:18px;flex-wrap:wrap}.avatar{display:grid;place-items:center;background:#e0f2fe;border-radius:50%;width:52px;height:52px;font-size:25px}.info{flex:1;min-width:180px}.info strong{display:block;font-size:18px}.info small{color:#61758a}.actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.actions form{margin:0}.selected{color:#157347;font-weight:bold}.alert{background:#fff1f2;border-left:5px solid #be123c;padding:14px;margin-bottom:18px;border-radius:7px;color:#9f1239}
+</style></head>
+<body>
+<div th:replace="~{fragments :: menu}"></div>
+
+<main class="wrap">
+    <header><h1>Entrenadores Pokémon</h1><p>Selecciona un entrenador para jugar con su equipo persistente.</p></header>
+    <section class="content">
+        <div class="alert" th:if="${error}" th:text="${error}">Error de ejemplo</div>
+        <div class="toolbar">
+            <strong th:text="|${#lists.size(entrenadores)} entrenadores registrados|">5 entrenadores registrados</strong>
+            <a class="btn" th:href="@{/entrenadores/nuevo}">+ Nuevo entrenador</a>
+        </div>
+    <div class="list">
+        <article class="item" th:each="e : ${entrenadores}">
+            <div class="avatar">★</div>
+            <div class="info">
+                <strong th:text="${e.nombre}">Ash Ketchum</strong>
+                <small th:text="|${e.tipo} · ${#lists.size(e.equipo)} Pokémon|">Entrenador · 4 Pokémon</small>
+            </div>
+            <div class="actions">
+                <span class="selected" th:if="${entrenadorSeleccionado != null and entrenadorSeleccionado.id == e.id}">✓ Seleccionado</span>
+                <form th:unless="${entrenadorSeleccionado != null and entrenadorSeleccionado.id == e.id}" th:action="@{/entrenadores/seleccionar}" method="post">
+                    <input type="hidden" name="id" th:value="${e.id}">
+                    <button class="btn" type="submit">Seleccionar</button>
+                </form>
+                <a class="btn secondary" th:href="@{/entrenadores/{id}/editar(id=${e.id})}">Editar</a>
+                <form th:action="@{/entrenadores/eliminar}" method="post">
+                    <input type="hidden" name="id" th:value="${e.id}"/>
+                    <button class="btn danger" type="submit">Eliminar</button>
+                </form>
+            </div>
+        </article>
+    </div>
+        <p th:if="${#lists.isEmpty(entrenadores)}">Todavía no hay entrenadores registrados.</p>
+</section>
+
+</main>
+<div th:replace="~{fragments :: footer}"></div>
+</body></html>
